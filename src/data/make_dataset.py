@@ -14,17 +14,27 @@ def clients_data(path,num_clients,output_path,seed):
     
     concentration_parameters = [male_proportion, female_proportion]
     num_clients = num_clients
+    df_temp = df.copy()
     
     dirichlet_samples = np.random.dirichlet(concentration_parameters, size=num_clients)
+    print(dirichlet_samples)
     
     for i, proportions in enumerate(dirichlet_samples):
+        samples = total_samples/ num_clients
     
-        male_samples = int(proportions[0] * total_samples)
-        female_samples = int(proportions[1] * total_samples)
+        male_samples = int(proportions[0] * samples)
+        female_samples = int(proportions[1] * samples)
+        print(male_samples)
         
-        
-        male_data = df[df['gender'] == 'Male'].sample(male_samples, replace=True)
-        female_data = df[df['gender'] == 'Female'].sample(female_samples, replace=True)
+        if i < num_clients-1:
+            male_data = df_temp[df_temp['gender'] == 'Male'].sample(male_samples, replace=False)
+            female_data = df_temp[df_temp['gender'] == 'Female'].sample(female_samples, replace=False)
+            df_temp.drop(index=male_data.index,inplace = True)
+            df_temp.drop(index=female_data.index,inplace=True)
+        else:
+            male_data = df_temp[df_temp['gender'] == 'Male']
+            female_data = df_temp[df_temp['gender'] == 'Female']
+            
         
         
         client_data = pd.concat([male_data, female_data])
