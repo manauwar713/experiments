@@ -3,49 +3,32 @@ import numpy as np
 import pathlib
 import os
 import yaml
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import LabelEncoder
 
-
-def clients_data(path,num_clients,output_path,seed):
+def load_data(path):
     df = pd.read_csv(path)
-    gender_counts = df['gender'].value_counts()
-    total_samples = gender_counts.sum()
-    male_proportion = gender_counts['Male'] / total_samples
-    female_proportion = gender_counts['Female'] / total_samples
+    return df
+def encoding(df):
+    label_encoder = LabelEncoder()
+    columns_to_encode = ['workclass','marital-status','occupation','relationship','race','gender','native-country','income']
+    for coloumn in columns_to_encode:
+        df[coloumn] = label_encoder.fit_transform(df[coloumn])
+    return df
+def split_data(df,test_split,seed):
     
-    concentration_parameters = [male_proportion, female_proportion]
-    num_clients = num_clients
-    df_temp = df.copy()
+    train,test = train_test_split(df,test_size = test_split,random_state = seed)
+    return train,test
+def save_data(train,test,output_path):
+    pathlib.Path(output_path).mkdir(parents=True,exist_ok=True)
+    train.to_csv(output_path + '/train.csv',index = False)
+    test.to_csv(output_path + '/test.csv',index = False)
     
-    dirichlet_samples = np.random.dirichlet(concentration_parameters, size=num_clients)
-    print(dirichlet_samples)
+
     
-    for i, proportions in enumerate(dirichlet_samples):
-        samples = total_samples/ num_clients
-    
-        male_samples = int(proportions[0] * samples)
-        female_samples = int(proportions[1] * samples)
-        print(male_samples)
-        
-        if i < num_clients-1:
-            male_data = df_temp[df_temp['gender'] == 'Male'].sample(male_samples, replace=False)
-            female_data = df_temp[df_temp['gender'] == 'Female'].sample(female_samples, replace=False)
-            df_temp.drop(index=male_data.index,inplace = True)
-            df_temp.drop(index=female_data.index,inplace=True)
-        else:
-            male_data = df_temp[df_temp['gender'] == 'Male']
-            female_data = df_temp[df_temp['gender'] == 'Female']
-            
-        
-        
-        client_data = pd.concat([male_data, female_data])
-        
-        
-        
-        
-        pathlib.Path(output_path).mkdir(parents=True,exist_ok=True)
-        output_dir = os.path.join(output_path,f'client_{i+1}.csv')
-        
-        client_data.to_csv(output_dir,index=False)
+
+
+
         
         
 def main():
@@ -58,7 +41,15 @@ def main():
     data_path = home_dir.as_posix() + '/data/raw/cleaned_adult.csv'
     output_path = home_dir.as_posix() + '/data/processed'
     
-    clients_data(data_path,params['num_clients'],output_path,params['seed'])
+    
+    data = load_data(data_path)
+    print(data.shape)
+    data = encoding(data)
+    print(data.shape)
+    train_data,test_data = split_data(data,params['test_split'],params['seed'])
+    print(train_data.shape)
+    save_data(train_data,test_data,output_path)
+    
     
 if __name__ == "__main__":
     main()
